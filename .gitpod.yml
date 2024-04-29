@@ -2,10 +2,11 @@ tasks:
   - init: >
       echo "Setting up the environment...";
       pip install atopile;
-      ato --version
+      ato --version;
+      ato --help
     command: >
-      echo "Ready to use atopile with the Voltage Divider example!";
-      gp open readme_examples/voltage_divider.ato
+      echo "Ready to use atopile!";
+      gp open docs\getting-started.md
 
 ports:
   - port: 3000
@@ -14,4 +15,3 @@ ports:
 vscode:
   extensions:
     - https://open-vsx.org/api/atopile/atopile/0.2.15/file/atopile.atopile-0.2.15.vsix
-
