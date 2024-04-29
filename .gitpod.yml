@@ -5,7 +5,7 @@ tasks:
       ato --version
     command: >
       echo "Ready to use AtoPile with the Voltage Divider example!"
-      code elec/src/voltage_divider.ato # This command opens the example file in VSCode
+      code readme_examples/voltage_divider.ato # This command opens the example file in VSCode
 
 ports:
   - port: 3000
@@ -13,4 +13,5 @@ ports:
 
 vscode:
   extensions:
-    - atopile.atopile-extension@latest
+    - atopile/atopile@latest
+

@@ -1,0 +1,23 @@
+from "generics/resistors.ato" import Resistor
+
+module VoltageDivider:
+    signal top
+    signal out
+    signal bottom
+
+    r_top = new Resistor
+    r_top.package = "R0402"
+
+    r_bottom = new Resistor
+    r_bottom.package = "0402"
+
+    top ~ r_top.p1; r_top.p2 ~ out
+    out ~ r_bottom.p1; r_bottom.p2 ~ bottom
+
+    r_total: resistance
+    v_in: voltage
+    v_out: voltage
+    i_q: current
+
+    assert v_in * r_bottom.value / (r_top.value + r_bottom.value) within v_out
+    assert v_in / (r_bottom.value + r_top.value) within i_q
