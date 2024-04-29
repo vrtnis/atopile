@@ -13,5 +13,5 @@ ports:
 
 vscode:
   extensions:
-    - atopile/atopile@latest
+    - atopile/atopile@0.2.15
 
