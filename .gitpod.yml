@@ -2,10 +2,10 @@ tasks:
   - init: >
       echo "Setting up the environment...";
       pip install atopile;
-      atopile --version
+      ato --version
     command: >
-      echo "Ready to use AtoPile with the Voltage Divider example!";
-      code atopile/readme_examples/voltage_divider.ato
+      echo "Ready to use atopile with the Voltage Divider example!";
+      gp open atopile/readme_examples/voltage_divider.ato
 
 ports:
   - port: 3000
