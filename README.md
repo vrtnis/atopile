@@ -93,7 +93,7 @@ Find our [documentation](https://atopile.io/getting-started/) and getting starte
 
 `atopile` is on pypi.org: https://pypi.org/project/atopile/
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/yourusername/yourrepository)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vrtnis/atopile)
 
 ### Most Basic Installation
 
