@@ -93,6 +93,8 @@ Find our [documentation](https://atopile.io/getting-started/) and getting starte
 
 `atopile` is on pypi.org: https://pypi.org/project/atopile/
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/yourusername/yourrepository)
+
 ### Most Basic Installation
 
 `atopile` requires *python3.11* or later, which you can install using your package manager or from [python.org](https://www.python.org/downloads/).
