@@ -13,5 +13,5 @@ ports:
 
 vscode:
   extensions:
-    - atopile/atopile@0.2.15
+    - https://open-vsx.org/api/atopile/atopile/0.2.15/file/atopile.atopile-0.2.15.vsix
 
