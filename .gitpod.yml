@@ -1,11 +1,13 @@
 tasks:
   - init: >
       echo "Setting up the environment..."
+      python -m venv venv
       source venv/bin/activate
-      ato --version
+      pip install atopile
+      atopile --version
     command: >
       echo "Ready to use AtoPile with the Voltage Divider example!"
-      code readme_examples/voltage_divider.ato # This command opens the example file in VSCode
+      code /workspace/atopile/readme_examples/voltage_divider.ato # This command opens the example file in VSCode
 
 ports:
   - port: 3000
