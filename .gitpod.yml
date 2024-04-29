@@ -6,7 +6,7 @@ tasks:
       ato --help
     command: >
       echo "Ready to use atopile!";
-      gp open docs\\getting-started.md
+      gp open docs/getting-started.md
 
 ports:
   - port: 3000
