@@ -5,7 +5,7 @@ tasks:
       ato --version
     command: >
       echo "Ready to use atopile with the Voltage Divider example!";
-      gp open atopile/readme_examples/voltage_divider.ato
+      gp open readme_examples/voltage_divider.ato
 
 ports:
   - port: 3000
