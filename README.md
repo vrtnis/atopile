@@ -93,13 +93,31 @@ Find our [documentation](https://atopile.io/getting-started/) and getting starte
 
 `atopile` is on pypi.org: https://pypi.org/project/atopile/
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vrtnis/atopile)
 
 ### Most Basic Installation
 
 `atopile` requires *python3.11* or later, which you can install using your package manager or from [python.org](https://www.python.org/downloads/).
 
 Then just `pip install atopile` and you're good to go!
+
+
+### Open in Gitpod
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vrtnis/atopile)
+
+
+To streamline your development process with atopile, consider using Gitpod, a pre-configured cloud-based development environment that runs directly in your browser. Here are some of the key benefits of using Gitpod with atopile:
+
+- **Zero Setup Time**: Launch into coding with atopile immediately, without any installation hassles. Everything from the atopile compiler, atopile VSCode extension to necessary dependencies is set up and ready as soon as you open your Gitpod workspace.
+
+- **Consistent Development Environment**: Each Gitpod workspace ensures that all team members are working with identical software setups. This consistency dramatically reduces "works on my machine" issues, facilitating smoother collaborations and integration testing.
+
+- **Pre-Built Workspaces**: Gitpod continuously pre-builds your Git repositories based on the latest commits. When you start a new session, Gitpod quickly prepares your environment by pulling in all required dependencies and pre-compiling your atopile projects, so you can dive straight into productive work without delay.
+
+- **Accessible from Anywhere**: With Gitpod, your development environment is as portable as your web browser. Whether you're on a laptop, a tablet, or even a borrowed machine, you can access your atopile projects with full setup instantly from anywhere.
+
+- **Seamless Integration with Version Control Systems**: Gitpod integrates directly with GitHub, Bitbucket, and GitLab. Start a new workspace for any branch, issue, or pull request with just a single click right from your repository.
+
 
 ## ❓ Why Atopile?
 
