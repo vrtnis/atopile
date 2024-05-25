@@ -9,7 +9,6 @@ import operator
 from collections import defaultdict, deque
 from contextlib import ExitStack, contextmanager
 from itertools import chain
-from numbers import Number
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional
 
@@ -17,9 +16,10 @@ import pint
 from antlr4 import ParserRuleContext
 from attrs import define, field, resolve_types
 
-from atopile import address, config, errors, expressions
+from atopile import address, config, errors, expressions, parse_utils
 from atopile.address import AddrStr
 from atopile.datatypes import KeyOptItem, KeyOptMap, Ref, StackList
+from atopile.expressions import RangedValue
 from atopile.generic_methods import recurse
 from atopile.parse import parser
 from atopile.parse_utils import get_src_info_from_ctx
@@ -75,19 +75,6 @@ class ClassDef(Base):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.address}>"
-
-
-class RangedValue(expressions.RangedValue):
-    def __init__(
-        self,
-        val_a: Number | pint.Quantity,
-        val_b: Number | pint.Quantity,
-        unit: Optional[pint.Unit] = None,
-        src_ctx: Optional[ParserRuleContext] = None,
-        pretty_unit: Optional[str] = None,
-    ):
-        self.src_ctx = src_ctx
-        super().__init__(val_a, val_b, unit, pretty_unit)
 
 
 class Expression(expressions.Expression):
@@ -402,12 +389,16 @@ class HandlesPrimaries(AtopileParserVisitor):
         else:
             unit = pint.Unit("")
 
-        return RangedValue(
-            src_ctx=ctx,
+        value = RangedValue(
             val_a=value,
             val_b=value,
             unit=unit,
+            str_rep=parse_utils.reconstruct(ctx),
+            # We don't bother with other formatting info here
+            # because it's not used for un-toleranced values
         )
+        setattr(value, "src_ctx", ctx)
+        return value
 
     def visitBilateral_quantity(self, ctx: ap.Bilateral_quantityContext) -> RangedValue:
         """Yield a physical value from a bilateral quantity context."""
@@ -432,12 +423,14 @@ class HandlesPrimaries(AtopileParserVisitor):
                 )
 
             # In this case, life's a little easier, and we can simply multiply the nominal
-            return RangedValue(
-                src_ctx=ctx,
+            value = RangedValue(
                 val_a=nominal_quantity.min_val - (nominal_quantity.min_val * tol_num / tol_divider),
                 val_b=nominal_quantity.max_val + (nominal_quantity.max_val * tol_num / tol_divider),
                 unit=nominal_quantity.unit,
+                str_rep=parse_utils.reconstruct(ctx),
             )
+            setattr(value, "src_ctx", ctx)
+            return value
 
         # Handle tolerances with units
         if tol_ctx.name():
@@ -447,12 +440,14 @@ class HandlesPrimaries(AtopileParserVisitor):
 
             # If the nominal has no unit, then we take the unit's tolerance for the nominal
             if nominal_quantity.unit == pint.Unit(""):
-                return RangedValue(
-                    src_ctx=ctx,
+                value = RangedValue(
                     val_a=nominal_quantity.min_val - tol_quantity.min_val,
                     val_b=nominal_quantity.max_val + tol_quantity.max_val,
                     unit=tol_quantity.unit,
+                    str_rep=parse_utils.reconstruct(ctx),
                 )
+                setattr(value, "src_ctx", ctx)
+                return value
 
             # If the nominal has a unit, then we rely on the ranged value's unit compatibility
             try:
@@ -466,12 +461,14 @@ class HandlesPrimaries(AtopileParserVisitor):
 
         # If there's no unit or percent, then we have a simple tolerance in the same units
         # as the nominal
-        return RangedValue(
-            src_ctx=ctx,
+        value = RangedValue(
             val_a=nominal_quantity.min_val - tol_num,
             val_b=nominal_quantity.max_val + tol_num,
             unit=nominal_quantity.unit,
+            str_rep=parse_utils.reconstruct(ctx),
         )
+        setattr(value, "src_ctx", ctx)
+        return value
 
     def visitBound_quantity(self, ctx: ap.Bound_quantityContext) -> RangedValue:
         """Yield a physical value from a bound quantity context."""
@@ -485,28 +482,28 @@ class HandlesPrimaries(AtopileParserVisitor):
         if (start.unit == pint.Unit("")) ^ (end.unit == pint.Unit("")):
             if start.unit == pint.Unit(""):
                 known_unit = end.unit
-                known_pretty_unit = end.pretty_unit
             else:
                 known_unit = start.unit
-                known_pretty_unit = start.pretty_unit
 
-            return RangedValue(
-                src_ctx=ctx,
+            value = RangedValue(
                 val_a=start.min_val,
                 val_b=end.min_val,
                 unit=known_unit,
-                pretty_unit=known_pretty_unit,
+                str_rep=parse_utils.reconstruct(ctx),
             )
+            setattr(value, "src_ctx", ctx)
+            return value
 
         # If they've both got units, let the RangedValue handle
         # the dimensional compatibility
         try:
-            return RangedValue(
-                src_ctx=ctx,
+            value = RangedValue(
                 val_a=start.min_qty,
                 val_b=end.min_qty,
-                pretty_unit=start.pretty_unit,
+                str_rep=parse_utils.reconstruct(ctx),
             )
+            setattr(value, "src_ctx", ctx)
+            return value
         except pint.DimensionalityError as ex:
             raise errors.AtoTypeError.from_ctx(
                 ctx,
@@ -612,15 +609,15 @@ class Roley(HandlesPrimaries):
     ) -> expressions.NumericishTypes:
         if ctx.ADD():
             return expressions.defer_operation_factory(
-                self.visit(ctx.arithmetic_expression()),
                 operator.add,
+                self.visit(ctx.arithmetic_expression()),
                 self.visit(ctx.term()),
             )
 
         if ctx.MINUS():
             return expressions.defer_operation_factory(
-                self.visit(ctx.arithmetic_expression()),
                 operator.sub,
+                self.visit(ctx.arithmetic_expression()),
                 self.visit(ctx.term()),
             )
 
@@ -629,15 +626,15 @@ class Roley(HandlesPrimaries):
     def visitTerm(self, ctx: ap.TermContext) -> expressions.NumericishTypes:
         if ctx.STAR():  # multiply
             return expressions.defer_operation_factory(
-                self.visit(ctx.term()),
                 operator.mul,
+                self.visit(ctx.term()),
                 self.visit(ctx.power()),
             )
 
         if ctx.DIV():
             return expressions.defer_operation_factory(
-                self.visit(ctx.term()),
                 operator.truediv,
+                self.visit(ctx.term()),
                 self.visit(ctx.power()),
             )
 
@@ -646,10 +643,26 @@ class Roley(HandlesPrimaries):
     def visitPower(self, ctx: ap.PowerContext) -> expressions.NumericishTypes:
         if ctx.POWER():
             return expressions.defer_operation_factory(
-                self.visit(ctx.atom(0)),
                 operator.pow,
-                self.visit(ctx.atom(1)),
+                self.visit(ctx.functional(0)),
+                self.visit(ctx.functional(1)),
             )
+
+        return self.visit(ctx.functional(0))
+
+    def visitFunctional(self, ctx: ap.FunctionalContext) -> expressions.NumericishTypes:
+        """Parse a functional expression."""
+        if ctx.name():
+            name = ctx.name().getText()
+            if name == "min":
+                func = expressions.RangedValue.min
+            elif name == "max":
+                func = expressions.RangedValue.max
+            else:
+                raise errors.AtoNotImplementedError(f"Unknown function '{name}'")
+
+            values = tuple(map(self.visit, ctx.atom()))
+            return expressions.defer_operation_factory(func, *values)
 
         return self.visit(ctx.atom(0))
 
@@ -661,12 +674,9 @@ class Roley(HandlesPrimaries):
             return self.visit(ctx.literal_physical())
 
         if ctx.name_or_attr():
-            return expressions.Symbol(
-                address.add_instances(
-                    self.addr,
-                    self.visit_ref_helper(ctx.name_or_attr()),
-                )
-            )
+            ref = self.visit_ref_helper(ctx.name_or_attr())
+            addr = address.add_instances(self.addr, ref)
+            return expressions.Symbol(addr)
 
         raise ValueError
 
@@ -1048,7 +1058,10 @@ class Dizzy(HandleStmtsFunctional, HandlesPrimaries):
             return KeyOptMap.empty()
 
         assigned_value_ref = self.visitName_or_attr(ctx.name_or_attr())
-        if len(assigned_value_ref) > 1:
+        # FIXME: we need to avoid arithmetic expressions here because
+        # they need the context of their address at build time - which we
+        # don't have at the class-level
+        if len(assigned_value_ref) > 1 or assignable_ctx.arithmetic_expression():
             # we'll deal with overrides later too!
             return KeyOptMap.empty()
 
@@ -1058,6 +1071,7 @@ class Dizzy(HandleStmtsFunctional, HandlesPrimaries):
             value=self.visitAssignable(assignable_ctx),
             given_type=self._get_type_info(ctx),
         )
+        _, line, *_ = get_src_info_from_ctx(ctx)
         return KeyOptMap.from_kv(assigned_value_ref, assignment)
 
     def visitDeclaration_stmt(self, ctx: ap.Declaration_stmtContext) -> KeyOptMap:
@@ -1279,18 +1293,28 @@ class Lofty(HandleStmtsFunctional, HandlesPrimaries):
         if assignable_ctx.new_stmt():
             return self.handle_new_assignment(ctx)
 
-        ########## Handle Overrides ##########
-
+        ########## Skip basic assignments ##########
         # We've already dealt with direct assignments in the previous layer
-        if len(assigned_ref) == 1:
+
+        # FIXME: perhaps it's be better to consolidate the class layers
+        # and instance construction. The ClassLayers just aren't that useful
+        # and require a bunch of this BS to function
+
+        if len(assigned_ref) == 1 and not assignable_ctx.arithmetic_expression():
             return KeyOptMap.empty()
 
+        ########## Handle Overrides + Arithmetic ##########
+
+        # Figure out what Instance object the assignment is being made to
         instance_addr_assigned_to = address.add_instances(
             self._instance_addr_stack.top, assigned_ref[:-1]
         )
         with _translate_addr_key_errors(ctx):
             instance_assigned_to = self._output_cache[instance_addr_assigned_to]
 
+        # Find the class associated with the assignment
+        # FIXME: wait a second... class associated with the assignment?
+        # I'm unconvinced this makes sense.
         # TODO: de-triplicate this
         if type_info := ctx.type_info():
             given_type = lookup_class_in_closure(
@@ -1411,6 +1435,10 @@ class Lofty(HandleStmtsFunctional, HandlesPrimaries):
                 operators.append("<")
             elif child_ctx := comp_ctx.gt_arithmetic_or():
                 operators.append(">")
+            elif child_ctx := comp_ctx.lt_eq_arithmetic_or():
+                operators.append("<=")
+            elif child_ctx := comp_ctx.gt_eq_arithmetic_or():
+                operators.append(">=")
             elif child_ctx := comp_ctx.in_arithmetic_or():
                 operators.append("within")
             else:
@@ -1430,7 +1458,32 @@ class Lofty(HandleStmtsFunctional, HandlesPrimaries):
 
         return KeyOptMap.empty()
 
+    def visitArithmetic_expression(self, ctx: ap.Arithmetic_expressionContext):
+        """
+        Handle arithmetic expressions, yielding either a numeric value or callable expression
 
+        This sits here because we need to defer these to Roley,
+        with the context of the current instance.
+        """
+        return Roley(self._instance_addr_stack.top).visitArithmetic_expression(ctx)
+
+
+def reset_caches(file: Path | str):
+    """Remove a file from the cache."""
+    file_str = str(file)
+
+    if file_str in parser.cache:
+        del parser.cache[file_str]
+
+    def _clear_cache(cache: dict[str, Any]):
+        # We do this in two steps to avoid modifying
+        # the dict while iterating over it
+        for addr in list(filter(lambda addr: addr.startswith(file_str), cache)):
+            del cache[addr]
+
+    _clear_cache(scoop._output_cache)
+    _clear_cache(dizzy._output_cache)
+    lofty._output_cache.clear()
 
 
 scoop = Scoop(parser.get_ast_from_file)
